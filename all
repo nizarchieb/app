@@ -414,3 +414,24 @@ class MyApp extends StatelessWidget {
   }
 }
 *********bird.dart*************
+class Bird {
+  final int id;
+  final String identifier;
+  final String gender;
+  final String species;
+  final String variety;
+  final String status;
+  final String cage;
+  final String birthDate;
+
+  Bird({
+    required this.id,
+    required this.identifier,
+    required this.gender,
+    required this.species,
+    required this.variety,
+    required this.status,
+    required this.cage,
+    required this.birthDate,
+  });
+}
