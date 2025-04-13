@@ -1,0 +1,416 @@
+***********home.dart*************
+import 'package:flutter/material.dart';
+import 'add_bird_page.dart';
+import 'package:app_volailles/models/bird.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Bird> _birds = [];
+
+  void _addOrUpdateBird(Bird bird) {
+    setState(() {
+      final index = _birds.indexWhere((b) => b.id == bird.id);
+      if (index != -1) {
+        _birds[index] = bird; // Update
+      } else {
+        _birds.add(bird); // Add
+      }
+    });
+  }
+
+  void _navigateToAddBirdPage({Bird? bird}) async {
+    final nextId = bird?.id ?? _birds.length + 1;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => AddBirdPage(
+              onSave: _addOrUpdateBird,
+              bird: bird,
+              nextId: nextId,
+            ),
+      ),
+    );
+
+    if (result != null && result is Bird) {
+      _addOrUpdateBird(result);
+    }
+  }
+
+  void onDrawerItemClicked(String title) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Clicked: $title")));
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, {String? trailing}) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      trailing:
+          trailing != null
+              ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  trailing,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              )
+              : null,
+      onTap: () {
+        onDrawerItemClicked(title);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 10,
+        backgroundColor: Colors.deepPurple,
+        title: const Text("Volailles"),
+        centerTitle: true,
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              icon: const Icon(Icons.menu, size: 33),
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.message, size: 25),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.search, size: 25),
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: const [
+                  Icon(
+                    Icons.flutter_dash,
+                    size: 40,
+                    color: Colors.white,
+                  ), // Fixed icon
+                  SizedBox(width: 10),
+                  Text(
+                    'My Birds',
+                    style: TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                ],
+              ),
+            ),
+            _buildDrawerItem(Icons.pets, 'Birds'),
+            _buildDrawerItem(Icons.favorite, 'Pairs'),
+            _buildDrawerItem(Icons.sell, 'Sales'),
+            _buildDrawerItem(Icons.shopping_cart, 'Purchases'),
+            _buildDrawerItem(Icons.bar_chart, 'Statistics'),
+            _buildDrawerItem(Icons.photo, 'Gallery'),
+            _buildDrawerItem(Icons.device_hub, 'Species'),
+            const Divider(),
+            _buildDrawerItem(Icons.ring_volume, 'Ring pending'),
+            _buildDrawerItem(Icons.egg, 'Incubating', trailing: '4'),
+            const Divider(),
+            _buildDrawerItem(Icons.money_off, 'Expenses'),
+            _buildDrawerItem(Icons.account_balance_wallet, 'Balance'),
+            _buildDrawerItem(Icons.category, 'Categories'),
+            const Divider(),
+            _buildDrawerItem(Icons.settings, 'Settings'),
+            _buildDrawerItem(Icons.info_outline, 'About'),
+          ],
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text("fff 👋", style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => _navigateToAddBirdPage(),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                "Ajouter",
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 154, 6, 187),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Expanded(
+              child:
+                  _birds.isEmpty
+                      ? const Text("Aucun oiseau ajouté.")
+                      : ListView.builder(
+                        itemCount: _birds.length,
+                        itemBuilder: (context, index) {
+                          final bird = _birds[index];
+                          return ListTile(
+                            leading: const Icon(Icons.pets),
+                            title: Text("${bird.id}. ${bird.identifier}"),
+                            subtitle: Text("${bird.species} | ${bird.status}"),
+                            trailing: Text(
+                              bird.birthDate.split('T')[0],
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            onTap: () => _navigateToAddBirdPage(bird: bird),
+                          );
+                        },
+                      ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+********************** add_bird.dart********************
+import 'package:flutter/material.dart';
+import 'package:app_volailles/models/bird.dart';
+
+class AddBirdPage extends StatefulWidget {
+  final Function(Bird) onSave;
+  final int nextId;
+  final Bird? bird;
+
+  const AddBirdPage({
+    super.key,
+    required this.onSave,
+    required this.nextId,
+    this.bird,
+  });
+
+  @override
+  State<AddBirdPage> createState() => _AddBirdPageState();
+}
+
+class _AddBirdPageState extends State<AddBirdPage> {
+  final _formKey = GlobalKey<FormState>();
+
+  String _identifier = '';
+  String _gender = 'Male';
+  String? _selectedSpecies;
+  String? _selectedVariety;
+  String? _selectedStatus;
+  String _cage = '';
+  DateTime? _birthDate;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.bird != null) {
+      final b = widget.bird!;
+      _identifier = b.identifier;
+      _gender = b.gender;
+      _selectedSpecies = b.species;
+      _selectedVariety = b.variety;
+      _selectedStatus = b.status;
+      _cage = b.cage;
+      _birthDate = DateTime.tryParse(b.birthDate);
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+      });
+    }
+  }
+
+  void _saveBird() {
+    if (_formKey.currentState!.validate() && _birthDate != null) {
+      _formKey.currentState!.save();
+      final newBird = Bird(
+        id: widget.bird?.id ?? widget.nextId,
+        identifier: _identifier,
+        gender: _gender,
+        species: _selectedSpecies!,
+        variety: _selectedVariety ?? '',
+        status: _selectedStatus!,
+        cage: _cage,
+        birthDate: _birthDate!.toIso8601String(),
+      );
+      widget.onSave(newBird);
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez remplir tous les champs obligatoires.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.bird == null ? "Ajouter un oiseau" : "Modifier l'oiseau",
+        ),
+        actions: [
+          IconButton(icon: const Icon(Icons.save), onPressed: _saveBird),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              initialValue: _identifier,
+              decoration: const InputDecoration(
+                labelText: 'Identifiant / Bague *',
+              ),
+              validator:
+                  (value) =>
+                      value == null || value.isEmpty ? 'Champ requis' : null,
+              onSaved: (value) => _identifier = value!,
+            ),
+            const SizedBox(height: 16),
+            const Text("Genre *"),
+            Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text("Male"),
+                    value: "Male",
+                    groupValue: _gender,
+                    onChanged: (value) => setState(() => _gender = value!),
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text("Female"),
+                    value: "Female",
+                    groupValue: _gender,
+                    onChanged: (value) => setState(() => _gender = value!),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedSpecies,
+              decoration: const InputDecoration(labelText: 'Espèce *'),
+              items:
+                  ['Pigeon', 'Canary', 'Parrot']
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+              validator: (value) => value == null ? 'Champ requis' : null,
+              onChanged: (value) => setState(() => _selectedSpecies = value),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedVariety,
+              decoration: const InputDecoration(labelText: 'Variété'),
+              items:
+                  ['Rouge', 'Bleu', 'Vert']
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+              onChanged: (value) => setState(() => _selectedVariety = value),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedStatus,
+              decoration: const InputDecoration(labelText: 'État de santé *'),
+              items:
+                  ['Healthy', 'Sick', 'In Treatment']
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+              validator: (value) => value == null ? 'Champ requis' : null,
+              onChanged: (value) => setState(() => _selectedStatus = value),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _cage,
+              decoration: const InputDecoration(labelText: 'Cage'),
+              onSaved: (value) => _cage = value ?? '',
+            ),
+            const SizedBox(height: 16),
+            const Text("Date de naissance *"),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  _birthDate == null
+                      ? "Aucune date sélectionnée"
+                      : "${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}",
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () => _selectDate(context),
+                  child: const Text("Choisir la date"),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+***********main.dart****************
+import 'package:flutter/material.dart';
+import 'pages/home.dart'; // ✅ Import de la page d’accueil
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(useMaterial3: true),
+      home: const HomePage(), // ✅ Utilise la page d’accueil isolée
+    );
+  }
+}
+*********bird.dart*************
