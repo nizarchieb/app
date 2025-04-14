@@ -1,7 +1,11 @@
 ***********home.dart*************
+// FILE: pages/home_page.dart
+
 import 'package:flutter/material.dart';
-import 'add_bird_page.dart';
-import 'package:app_volailles/models/bird.dart';
+import 'package:appp/pages/add_bird.dart';
+import 'package:appp/models/bird.dart';
+import 'package:appp/pages/statistics_page.dart';
+import 'package:appp/pages/pairs_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,16 +21,15 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       final index = _birds.indexWhere((b) => b.id == bird.id);
       if (index != -1) {
-        _birds[index] = bird; // Update
+        _birds[index] = bird;
       } else {
-        _birds.add(bird); // Add
+        _birds.add(bird);
       }
     });
   }
 
   void _navigateToAddBirdPage({Bird? bird}) async {
     final nextId = bird?.id ?? _birds.length + 1;
-
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -38,7 +41,6 @@ class _HomePageState extends State<HomePage> {
             ),
       ),
     );
-
     if (result != null && result is Bird) {
       _addOrUpdateBird(result);
     }
@@ -46,9 +48,17 @@ class _HomePageState extends State<HomePage> {
 
   void onDrawerItemClicked(String title) {
     Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Clicked: $title")));
+    if (title == 'Statistics') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => StatisticsPage(birds: _birds)),
+      );
+    } else if (title == 'Pairs') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PairsPage(birds: _birds)),
+      );
+    }
   }
 
   Widget _buildDrawerItem(IconData icon, String title, {String? trailing}) {
@@ -69,9 +79,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               )
               : null,
-      onTap: () {
-        onDrawerItemClicked(title);
-      },
+      onTap: () => onDrawerItemClicked(title),
     );
   }
 
@@ -115,14 +123,10 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: const [
-                  Icon(
-                    Icons.flutter_dash,
-                    size: 40,
-                    color: Colors.white,
-                  ), // Fixed icon
+                  Icon(Icons.flutter_dash, size: 40, color: Colors.white),
                   SizedBox(width: 10),
                   Text(
-                    'My Birds',
+                    'menu',
                     style: TextStyle(color: Colors.white, fontSize: 20),
                   ),
                 ],
@@ -198,9 +202,10 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+
 ********************** add_bird.dart********************
 import 'package:flutter/material.dart';
-import 'package:app_volailles/models/bird.dart';
+import 'package:appp/models/bird.dart';
 
 class AddBirdPage extends StatefulWidget {
   final Function(Bird) onSave;
@@ -395,7 +400,7 @@ class _AddBirdPageState extends State<AddBirdPage> {
 
 ***********main.dart****************
 import 'package:flutter/material.dart';
-import 'pages/home.dart'; // ✅ Import de la page d’accueil
+import 'package:appp/pages/home_page.dart'; // ✅ Import de la page d’accueil
 
 void main() {
   runApp(const MyApp());
@@ -413,6 +418,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 *********bird.dart*************
 class Bird {
   final int id;
@@ -435,3 +441,265 @@ class Bird {
     required this.birthDate,
   });
 }
+*****************model/pair.dart************
+import 'bird.dart';
+
+class Pair {
+  final Bird male;
+  final Bird female;
+
+  Pair({required this.male, required this.female});
+}
+***************pages/add_pair_dialog*************************
+// FILE: pages/add_pair_dialog.dart
+
+import 'package:flutter/material.dart';
+import 'package:appp/models/bird.dart';
+import 'package:appp/models/pair.dart';
+
+class AddPairDialog extends StatefulWidget {
+  final List<Bird> birds;
+
+  const AddPairDialog({super.key, required this.birds});
+
+  @override
+  State<AddPairDialog> createState() => _AddPairDialogState();
+}
+
+class _AddPairDialogState extends State<AddPairDialog> {
+  Bird? _selectedMale;
+  Bird? _selectedFemale;
+
+  late List<Bird> _availableMales;
+  late List<Bird> _availableFemales;
+
+  @override
+  void initState() {
+    super.initState();
+    _availableMales =
+        widget.birds.where((b) => b.gender.toLowerCase() == 'male').toList();
+    _availableFemales =
+        widget.birds.where((b) => b.gender.toLowerCase() == 'female').toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Ajouter une paire"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<Bird>(
+            value: _selectedMale,
+            hint: const Text("Sélectionner un mâle"),
+            items:
+                _availableMales.map((bird) {
+                  return DropdownMenuItem(
+                    value: bird,
+                    child: Text("${bird.identifier} (${bird.species})"),
+                  );
+                }).toList(),
+            onChanged: (value) => setState(() => _selectedMale = value),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<Bird>(
+            value: _selectedFemale,
+            hint: const Text("Sélectionner une femelle"),
+            items:
+                _availableFemales.map((bird) {
+                  return DropdownMenuItem(
+                    value: bird,
+                    child: Text("${bird.identifier} (${bird.species})"),
+                  );
+                }).toList(),
+            onChanged: (value) => setState(() => _selectedFemale = value),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          child: const Text("Annuler"),
+          onPressed: () => Navigator.pop(context),
+        ),
+        ElevatedButton(
+          child: const Text("Ajouter"),
+          onPressed: () {
+            if (_selectedMale != null && _selectedFemale != null) {
+              final newPair = Pair(
+                male: _selectedMale!,
+                female: _selectedFemale!,
+              );
+              Navigator.pop(context, newPair);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+**********************************pairs_page.dart**********************
+// FILE: pages/pairs_page.dart
+
+import 'package:flutter/material.dart';
+import 'package:appp/models/bird.dart';
+import 'package:appp/models/pair.dart';
+import 'package:appp/pages/add_pair_dialog.dart';
+
+class PairsPage extends StatefulWidget {
+  final List<Bird> birds;
+
+  const PairsPage({super.key, required this.birds});
+
+  @override
+  State<PairsPage> createState() => _PairsPageState();
+}
+
+class _PairsPageState extends State<PairsPage> {
+  final List<Pair> _pairs = [];
+
+  void _addPair(Pair pair) {
+    setState(() {
+      _pairs.add(pair);
+    });
+  }
+
+  void _openAddPairDialog() async {
+    final Pair? newPair = await showDialog<Pair>(
+      context: context,
+      builder: (_) => AddPairDialog(birds: widget.birds),
+    );
+    if (newPair != null) {
+      _addPair(newPair);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Paires")),
+      body:
+          _pairs.isEmpty
+              ? const Center(child: Text("Aucune paire enregistrée."))
+              : ListView.builder(
+                itemCount: _pairs.length,
+                itemBuilder: (context, index) {
+                  final pair = _pairs[index];
+                  return ListTile(
+                    leading: const Icon(Icons.favorite),
+                    title: Text(
+                      "${pair.male.identifier} x ${pair.female.identifier}",
+                    ),
+                    subtitle: Text(
+                      "${pair.male.species} & ${pair.female.species}",
+                    ),
+                  );
+                },
+              ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAddPairDialog,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+******************statics page************************
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:appp/models/bird.dart'; // Make sure your app name is 'appp'
+
+class StatisticsPage extends StatelessWidget {
+  final List<Bird> birds;
+
+  const StatisticsPage({super.key, required this.birds});
+
+  @override
+  Widget build(BuildContext context) {
+    final maleCount = birds.where((b) => b.gender == 'Male').length;
+    final femaleCount = birds.where((b) => b.gender == 'Female').length;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Statistiques des oiseaux")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 4,
+                  centerSpaceRadius: 30,
+                  sections: [
+                    PieChartSectionData(
+                      color: Colors.blue,
+                      value: maleCount.toDouble(),
+                      title: '♂ $maleCount',
+                      titleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    PieChartSectionData(
+                      color: Colors.pink,
+                      value: femaleCount.toDouble(),
+                      title: '♀ $femaleCount',
+                      titleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            GenderStatTile(
+              label: "Mâles",
+              count: maleCount,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 10),
+            GenderStatTile(
+              label: "Femelles",
+              count: femaleCount,
+              color: Colors.pink,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class GenderStatTile extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const GenderStatTile({
+    super.key,
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: color.withOpacity(0.1),
+      child: ListTile(
+        leading: Icon(Icons.pets, color: color),
+        title: Text(
+          label,
+          style: TextStyle(color: color, fontWeight: FontWeight.bold),
+        ),
+        trailing: Text(
+          '$count',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+****************************
