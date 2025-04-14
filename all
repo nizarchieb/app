@@ -702,4 +702,9 @@ class GenderStatTile extends StatelessWidget {
     );
   }
 }
-****************************
+**************************** byspec.yaml*******
+dependencies:
+  flutter:
+    sdk: flutter
+  fl_chart: 0.70.2
+******************************************
